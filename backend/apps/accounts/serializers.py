@@ -71,7 +71,7 @@ class LoginSerializer(serializers.Serializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    is_professional = serializers.BooleanField(source='is_professional', read_only=True)
+    is_professional = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = User
