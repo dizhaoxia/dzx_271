@@ -19,6 +19,10 @@
                 <el-icon><HistoryIcon /></el-icon>
                 <span>查看历史</span>
               </el-button>
+              <el-button v-if="authStore.isProfessional" type="success" size="large" @click="$router.push('/clinic')">
+                <el-icon><User /></el-icon>
+                <span>专业端工作台</span>
+              </el-button>
             </div>
           </div>
           <div class="hero-stats">
@@ -77,7 +81,7 @@
 import { computed } from 'vue'
 import Layout from '@/components/Layout.vue'
 import { useAuthStore } from '@/stores/auth'
-import { Sunny, Warning, CircleClose, EditPen, Clock as HistoryIcon } from '@element-plus/icons-vue'
+import { Sunny, Warning, CircleClose, EditPen, Clock as HistoryIcon, User } from '@element-plus/icons-vue'
 
 const authStore = useAuthStore()
 const userInfo = computed(() => authStore.userInfo)

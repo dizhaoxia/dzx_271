@@ -116,12 +116,14 @@ FACTOR_COUNTS = {k: len(v) for k, v in FACTOR_QUESTIONS.items()}
 def calculate_scores(answers):
     scores = {}
     for factor, nums in FACTOR_QUESTIONS.items():
-        total = sum(answers.get(num, 0) for num in nums)
-        count = FACTOR_COUNTS[factor]
+        answered = [answers.get(num, 0) for num in nums if num in answers]
+        total = sum(answered)
+        count = len(answered)
         scores[factor] = round(total / count, 2) if count > 0 else 0.0
 
+    answered_count = len(answers)
     total_sum = sum(answers.values())
-    gsi = round(total_sum / 90, 2)
+    gsi = round(total_sum / answered_count, 2) if answered_count > 0 else 0.0
 
     positive_count = sum(1 for v in answers.values() if v > 1)
     positive_sum = sum(v for v in answers.values() if v > 1)
@@ -132,7 +134,8 @@ def calculate_scores(answers):
         'gsi': gsi,
         'positive_count': positive_count,
         'positive_avg': positive_avg,
-        'total_sum': total_sum
+        'total_sum': total_sum,
+        'answered_count': answered_count,
     }
 
 
@@ -167,3 +170,140 @@ def compare_with_norm(factor_scores):
                 'description': desc
             }
     return result
+
+
+# ---------- 自适应问卷：首轮筛查条目（每个因子取 2 个关键题，共 18 题，缩短作答）----------
+SCREENING_ITEMS = [
+    1, 4,      # SOM 躯体化
+    3, 9,      # O-C 强迫
+    36, 41,    # I-S 人际敏感
+    14, 15,    # DEP 抑郁
+    2, 17,     # ANX 焦虑
+    11, 24,    # HOS 敌对
+    13, 25,    # PHOB 恐怖
+    7, 18,     # PAR 偏执
+    16, 35,    # PSY 精神病性
+]
+
+
+def is_factor_elevated(factor_code, factor_scores, comparisons=None):
+    """判断某因子是否升高（>= 常模均值 + 1SD）。"""
+    score = factor_scores.get(factor_code)
+    if score is None:
+        return False
+    if comparisons and factor_code in comparisons:
+        c = comparisons[factor_code]
+        return score > c['norm_mean'] + c['norm_std']
+    # 退化判断：因子均分 > 2 视为升高
+    return score > 2
+
+
+# ---------- 子量表定义：PHQ-9 / GAD-7 ----------
+SUBSCALES = [
+    {
+        'code': 'PHQ9',
+        'name': 'PHQ-9 抑郁症筛查量表',
+        'trigger_factor': 'DEP',
+        'description': '基于过去两周内的情绪状态进行抑郁严重度筛查，共 9 题。',
+        'max_score': 27,
+    },
+    {
+        'code': 'GAD7',
+        'name': 'GAD-7 广泛性焦虑量表',
+        'trigger_factor': 'ANX',
+        'description': '评估过去两周内的广泛性焦虑严重度，共 7 题。',
+        'max_score': 21,
+    },
+]
+
+PHQ9_QUESTIONS = [
+    (1, '做事时提不起劲或没有兴趣'),
+    (2, '感到心情低落、沮丧或绝望'),
+    (3, '入睡困难、睡不安稳或睡眠过多'),
+    (4, '感觉疲倦或没有活力'),
+    (5, '食欲不振或吃得太多'),
+    (6, '觉得自己很糟，或觉得自己是个失败者，让家人失望'),
+    (7, '对事物专注有困难，如阅读报纸或看电视时'),
+    (8, '动作或说话速度缓慢到他人已察觉；或正好相反，烦躁或坐立不安'),
+    (9, '有不如死掉或用某种方式伤害自己的念头'),
+]
+
+GAD7_QUESTIONS = [
+    (1, '感到紧张、焦虑或急躁'),
+    (2, '无法停止或控制担忧'),
+    (3, '对各种各样的事情担忧过多'),
+    (4, '很难放松下来'),
+    (5, '坐立不安，很难安静下来'),
+    (6, '容易心烦或易怒'),
+    (7, '感到害怕，好像有可怕的事发生'),
+]
+
+SUBSCALE_QUESTIONS = {
+    'PHQ9': PHQ9_QUESTIONS,
+    'GAD7': GAD7_QUESTIONS,
+}
+
+# 选项：0 完全没有 / 1 有几天 / 2 一半以上时间 / 3 几乎每天
+SUBSCALE_OPTIONS = [
+    (0, '完全没有'),
+    (1, '有几天'),
+    (2, '一半以上时间'),
+    (3, '几乎每天'),
+]
+
+
+def subscale_severity(code, total_score):
+    """返回子量表严重度等级与解读。"""
+    if code == 'PHQ9':
+        if total_score <= 4:
+            return 'minimal', '无抑郁症状', '当前无明显抑郁，建议保持健康生活方式。'
+        if total_score <= 9:
+            return 'mild', '轻度抑郁', '存在轻度抑郁情绪，建议自我调节、加强运动与社会支持。'
+        if total_score <= 14:
+            return 'moderate', '中度抑郁', '建议尽快寻求心理咨询师评估。'
+        if total_score <= 19:
+            return 'moderately_severe', '中重度抑郁', '建议尽快就医，由精神科医生评估是否需要药物治疗。'
+        return 'severe', '重度抑郁', '建议立即就医，警惕自伤风险，必要时联系心理援助热线。'
+    if code == 'GAD7':
+        if total_score <= 4:
+            return 'minimal', '无焦虑', '当前无明显焦虑，建议保持规律作息。'
+        if total_score <= 9:
+            return 'mild', '轻度焦虑', '存在轻度焦虑，建议放松训练与自我调节。'
+        if total_score <= 14:
+            return 'moderate', '中度焦虑', '建议寻求心理咨询师评估。'
+        return 'severe', '重度焦虑', '建议尽快就医评估，必要时药物治疗。'
+    return 'minimal', '', ''
+
+
+def calculate_subscale(code, answers):
+    """计算子量表得分：answers 为 {题号: 分值(0-3)}。"""
+    questions = SUBSCALE_QUESTIONS.get(code, [])
+    total = sum(answers.get(num, 0) for num, _ in questions)
+    level, label, advice = subscale_severity(code, total)
+    return {
+        'code': code,
+        'total_score': total,
+        'max_score': len(questions) * 3,
+        'answered_count': len(answers),
+        'severity': level,
+        'severity_label': label,
+        'advice': advice,
+        'answers': {str(k): v for k, v in answers.items()},
+    }
+
+
+def recommend_subscales(factor_scores, comparisons=None):
+    """根据首轮 SCL-90 因子严重度，推荐追加的子量表。"""
+    recommended = []
+    for sub in SUBSCALES:
+        trigger = sub['trigger_factor']
+        if trigger and is_factor_elevated(trigger, factor_scores, comparisons):
+            recommended.append({
+                'code': sub['code'],
+                'name': sub['name'],
+                'description': sub['description'],
+                'trigger_factor': trigger,
+                'trigger_score': factor_scores.get(trigger, 0),
+                'question_count': len(SUBSCALE_QUESTIONS[sub['code']]),
+            })
+    return recommended

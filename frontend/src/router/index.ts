@@ -34,7 +34,13 @@ const routes: RouteRecordRaw[] = [
     path: '/questionnaire',
     name: 'Questionnaire',
     component: () => import('@/views/Questionnaire.vue'),
-    meta: { requiresAuth: true, title: 'SCL-90问卷' },
+    meta: { requiresAuth: true, title: '自适应测评' },
+  },
+  {
+    path: '/questionnaire-classic',
+    name: 'QuestionnaireClassic',
+    component: () => import('@/views/QuestionnaireClassic.vue'),
+    meta: { requiresAuth: true, title: 'SCL-90问卷（完整版）' },
   },
   {
     path: '/result/:id',
@@ -47,6 +53,26 @@ const routes: RouteRecordRaw[] = [
     name: 'History',
     component: () => import('@/views/History.vue'),
     meta: { requiresAuth: true, title: '历史记录' },
+  },
+  {
+    path: '/clinic',
+    name: 'Clinic',
+    component: () => import('@/views/clinic/ClinicLayout.vue'),
+    meta: { requiresAuth: true, requiresProfessional: true, title: '专业端' },
+    children: [
+      {
+        path: '',
+        name: 'ClinicPatients',
+        component: () => import('@/views/clinic/Patients.vue'),
+        meta: { title: '我的患者' },
+      },
+      {
+        path: 'patient/:id',
+        name: 'ClinicPatientDetail',
+        component: () => import('@/views/clinic/PatientDetail.vue'),
+        meta: { title: '患者档案' },
+      },
+    ],
   },
   {
     path: '/profile',
@@ -79,6 +105,24 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/admin/Records.vue'),
         meta: { title: '测评数据' },
       },
+      {
+        path: 'high-risk',
+        name: 'AdminHighRisk',
+        component: () => import('@/views/admin/HighRisk.vue'),
+        meta: { title: '高危人群' },
+      },
+      {
+        path: 'professionals',
+        name: 'AdminProfessionals',
+        component: () => import('@/views/admin/Professionals.vue'),
+        meta: { title: '专业人员' },
+      },
+      {
+        path: 'audit-logs',
+        name: 'AdminAuditLogs',
+        component: () => import('@/views/admin/AuditLogs.vue'),
+        meta: { title: '操作审计' },
+      },
     ],
   },
   {
@@ -107,6 +151,11 @@ router.beforeEach((to, from, next) => {
   }
 
   if (to.meta.requiresStaff && !authStore.isStaff) {
+    next({ name: 'Home' })
+    return
+  }
+
+  if (to.meta.requiresProfessional && !authStore.isProfessional) {
     next({ name: 'Home' })
     return
   }

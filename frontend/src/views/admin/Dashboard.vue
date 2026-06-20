@@ -47,6 +47,27 @@
     </el-row>
 
     <el-row :gutter="16" class="mb-20">
+      <el-col :span="12">
+        <div class="stat-card risk-card">
+          <el-icon :size="32"><WarnTriangleFilled /></el-icon>
+          <div class="sc-body">
+            <div class="sc-value">{{ stats?.high_risk_count || 0 }}</div>
+            <div class="sc-label">高危人群数（主动干预）</div>
+          </div>
+        </div>
+      </el-col>
+      <el-col :span="12">
+        <div class="stat-card pro-card">
+          <el-icon :size="32"><UserFilled /></el-icon>
+          <div class="sc-body">
+            <div class="sc-value">{{ stats?.professional_count || 0 }}</div>
+            <div class="sc-label">专业人员数（医生/咨询师）</div>
+          </div>
+        </div>
+      </el-col>
+    </el-row>
+
+    <el-row :gutter="16" class="mb-20">
       <el-col :span="10">
         <el-card class="card-shadow">
           <div class="section-title">风险等级分布</div>
@@ -73,7 +94,7 @@ import { ref, onMounted, nextTick } from 'vue'
 import * as echarts from 'echarts'
 import { adminApi } from '@/api'
 import type { DashboardStats } from '@/types'
-import { DataAnalysis, User, Document, Avatar, TrendCharts } from '@element-plus/icons-vue'
+import { DataAnalysis, User, Document, Avatar, TrendCharts, WarnTriangleFilled, UserFilled, CircleClose } from '@element-plus/icons-vue'
 
 const loading = ref(true)
 const stats = ref<DashboardStats | null>(null)
@@ -185,6 +206,8 @@ onMounted(loadData)
 .records-card { background: linear-gradient(135deg, #f0f9eb 0%, #ecfff5 100%); color: #67c23a; }
 .unique-card { background: linear-gradient(135deg, #fdf6ec 0%, #fff9f0 100%); color: #e6a23c; }
 .gsi-card { background: linear-gradient(135deg, #fef0f0 0%, #fff5f5 100%); color: #f56c6c; }
+.risk-card { background: linear-gradient(135deg, #fef0f0 0%, #fff3f3 100%); color: #f56c6c; }
+.pro-card { background: linear-gradient(135deg, #f0f2ff 0%, #f4f6ff 100%); color: #6c5ce7; }
 .sc-value { font-size: 30px; font-weight: 700; }
 .sc-label { font-size: 13px; opacity: .8; margin-top: 4px; }
 .chart-box { width: 100%; height: 280px; }

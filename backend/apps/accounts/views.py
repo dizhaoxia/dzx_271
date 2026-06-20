@@ -4,10 +4,11 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from .serializers import (
     RegisterSerializer, LoginSerializer, UserSerializer,
     PasswordResetRequestSerializer, PasswordResetConfirmSerializer,
-    PasswordChangeSerializer
+    PasswordChangeSerializer, CONSENT_VERSION
 )
 
 User = get_user_model()
@@ -31,7 +32,7 @@ class AuthViewSet(viewsets.GenericViewSet):
         user = serializer.save()
         tokens = get_tokens_for_user(user)
         return Response({
-            'user': UserSerializer(user).data,
+            'user': UserSerializer(user, context={'request': request}).data,
             'tokens': tokens
         }, status=status.HTTP_201_CREATED)
 
@@ -42,7 +43,7 @@ class AuthViewSet(viewsets.GenericViewSet):
         user = serializer.validated_data['user']
         tokens = get_tokens_for_user(user)
         return Response({
-            'user': UserSerializer(user).data,
+            'user': UserSerializer(user, context={'request': request}).data,
             'tokens': tokens
         })
 
@@ -91,11 +92,11 @@ class UserProfileView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        serializer = UserSerializer(request.user)
+        serializer = UserSerializer(request.user, context={'request': request})
         return Response(serializer.data)
 
     def put(self, request):
-        serializer = UserSerializer(request.user, data=request.data, partial=True)
+        serializer = UserSerializer(request.user, data=request.data, partial=True, context={'request': request})
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
@@ -112,3 +113,46 @@ class PasswordChangeView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response({'detail': '密码修改成功'})
+
+
+class ConsentView(APIView):
+    """隐私同意授权：记录用户对数据收集与处理的同意。"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        accepted = request.data.get('accepted', False)
+        if not accepted:
+            return Response({'detail': '未同意协议'}, status=status.HTTP_400_BAD_REQUEST)
+        user = request.user
+        user.consent_accepted = True
+        user.consent_accepted_at = timezone.now()
+        user.consent_version = CONSENT_VERSION
+        user.save(update_fields=['consent_accepted', 'consent_accepted_at', 'consent_version'])
+        try:
+            from apps.compliance.models import ConsentRecord
+            ConsentRecord.objects.create(
+                user=user,
+                consent_type='privacy',
+                version=CONSENT_VERSION,
+                accepted=True,
+                ip_address=self._client_ip(request),
+            )
+        except Exception:
+            pass
+        return Response({'detail': '已记录同意授权', 'version': CONSENT_VERSION})
+
+    def get(self, request):
+        return Response({
+            'consent_accepted': request.user.consent_accepted,
+            'consent_accepted_at': request.user.consent_accepted_at,
+            'consent_version': request.user.consent_version,
+            'current_version': CONSENT_VERSION,
+            'needs_reconsent': request.user.consent_version != CONSENT_VERSION,
+        })
+
+    @staticmethod
+    def _client_ip(request):
+        xff = request.META.get('HTTP_X_FORWARDED_FOR')
+        if xff:
+            return xff.split(',')[0].strip()
+        return request.META.get('REMOTE_ADDR')

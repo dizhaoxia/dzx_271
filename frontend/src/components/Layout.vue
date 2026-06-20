@@ -10,6 +10,7 @@
           <el-menu-item index="/home">首页</el-menu-item>
           <el-menu-item index="/questionnaire">开始测评</el-menu-item>
           <el-menu-item index="/history">历史记录</el-menu-item>
+          <el-menu-item v-if="isProfessional" index="/clinic">专业端</el-menu-item>
           <el-menu-item v-if="isStaff" index="/admin/dashboard">管理后台</el-menu-item>
           <el-menu-item index="/profile">个人中心</el-menu-item>
         </el-menu>
@@ -64,12 +65,14 @@ const authStore = useAuthStore()
 
 const userInfo = computed<User | null>(() => authStore.userInfo)
 const isStaff = computed(() => authStore.isStaff)
+const isProfessional = computed(() => authStore.isProfessional)
 
 const activeMenu = ref(route.path)
 watch(
   () => route.path,
   (p) => {
     if (p.startsWith('/admin')) activeMenu.value = '/admin/dashboard'
+    else if (p.startsWith('/clinic')) activeMenu.value = '/clinic'
     else activeMenu.value = p
   }
 )

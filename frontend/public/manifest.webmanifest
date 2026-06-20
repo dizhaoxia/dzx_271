@@ -1,0 +1,20 @@
+{
+  "name": "SCL-90 症状自评量表",
+  "short_name": "SCL-90",
+  "description": "自适应心理健康测评系统，支持智能问卷、PDF报告与专业随访",
+  "start_url": "/home",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f5f7fa",
+  "theme_color": "#409eff",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

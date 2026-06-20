@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     'apps.questionnaire',
     'apps.records',
     'apps.admin_panel',
+    'apps.compliance',
 ]
 
 MIDDLEWARE = [

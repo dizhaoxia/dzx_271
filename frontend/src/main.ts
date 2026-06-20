@@ -19,3 +19,10 @@ app.use(pinia)
 app.use(router)
 app.use(ElementPlus, { locale: zhCn })
 app.mount('#app')
+
+// 注册 PWA Service Worker（生产环境）
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {
+    /* 忽略注册失败 */
+  })
+}

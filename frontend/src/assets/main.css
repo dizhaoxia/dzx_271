@@ -65,3 +65,24 @@
   padding-left: 10px;
   border-left: 4px solid var(--primary-color);
 }
+
+/* ---------- 移动端响应式适配 ---------- */
+@media (max-width: 768px) {
+  .page-container { padding: 12px; }
+  .section-title { font-size: 16px; }
+  .el-header.layout-header .header-inner { padding: 0 12px; }
+  .logo-text { font-size: 16px; }
+  .nav-menu { margin: 0 8px; }
+  .nav-menu .el-menu-item { padding: 0 10px; font-size: 13px; }
+  .user-area { min-width: auto; }
+  /* 表格横向滚动 */
+  .el-table { width: 100%; }
+  /* 卡片内边距收紧 */
+  .el-card__body { padding: 12px; }
+}
+
+@media (max-width: 480px) {
+  .nav-menu { display: none; }
+  .hero-content { flex-direction: column; gap: 20px; }
+  .hero-stats { width: 100%; }
+}

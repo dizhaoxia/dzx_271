@@ -58,11 +58,18 @@
               </span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="120" align="center" fixed="right">
+          <el-table-column label="趋势" width="100" align="center">
             <template #default="{ row }">
-              <el-button type="primary" link @click="$router.push(`/result/${row.id}`)">
-                查看报告
-              </el-button>
+              <el-tag v-if="trendMap[row.id]" :type="trendTagType(trendMap[row.id].tag)" size="small" effect="dark">
+                {{ trendLabel(trendMap[row.id].tag) }} {{ sign(trendMap[row.id].delta) }}{{ Math.abs(trendMap[row.id].delta).toFixed(2) }}
+              </el-tag>
+              <el-tag v-else type="info" size="small" effect="plain">首次</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="170" align="center" fixed="right">
+            <template #default="{ row }">
+              <el-button type="primary" link @click="$router.push(`/result/${row.id}`)">查看报告</el-button>
+              <el-button type="warning" link :loading="downloadingId === row.id" @click="downloadPdf(row)">下载PDF</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -83,7 +90,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
 import Layout from '@/components/Layout.vue'
 import { recordsApi } from '@/api'
@@ -97,6 +105,48 @@ const page = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 const chartRef = ref<HTMLElement>()
+const downloadingId = ref<number | null>(null)
+
+const trendMap = computed<Record<number, { tag: 'improved' | 'worsened' | 'stable'; delta: number }>>(() => {
+  const map: Record<number, { tag: 'improved' | 'worsened' | 'stable'; delta: number }> = {}
+  const sorted = [...trendData.value].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+  for (let i = 1; i < sorted.length; i++) {
+    const delta = +(sorted[i].gsi - sorted[i - 1].gsi).toFixed(2)
+    let tag: 'improved' | 'worsened' | 'stable' = 'stable'
+    if (delta <= -0.1) tag = 'improved'
+    else if (delta >= 0.1) tag = 'worsened'
+    map[sorted[i].id] = { tag, delta }
+  }
+  return map
+})
+
+function trendTagType(t: string): 'success' | 'warning' | 'danger' | 'info' {
+  return t === 'improved' ? 'success' : t === 'worsened' ? 'danger' : 'info'
+}
+function trendLabel(t: string) {
+  return t === 'improved' ? '改善' : t === 'worsened' ? '恶化' : '稳定'
+}
+function sign(v: number) { return v > 0 ? '+' : v < 0 ? '−' : '' }
+
+async function downloadPdf(row: AssessmentRecord) {
+  downloadingId.value = row.id
+  try {
+    const blob = await recordsApi.downloadPdf(row.id) as unknown as Blob
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `SCL90报告_${row.id}_${new Date(row.created_at).toISOString().slice(0, 10)}.pdf`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+    ElMessage.success('PDF 报告已开始下载')
+  } catch {
+    /* handled by interceptor */
+  } finally {
+    downloadingId.value = null
+  }
+}
 
 async function loadRecords() {
   try {

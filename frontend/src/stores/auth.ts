@@ -14,6 +14,8 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isLoggedIn = computed(() => !!accessToken.value)
   const isStaff = computed(() => userInfo.value?.is_staff ?? false)
+  const isProfessional = computed(() => userInfo.value?.is_professional ?? false)
+  const role = computed(() => userInfo.value?.role ?? 'patient')
 
   function setTokens(tokens: Tokens) {
     accessToken.value = tokens.access
@@ -86,6 +88,8 @@ export const useAuthStore = defineStore('auth', () => {
     userInfo,
     isLoggedIn,
     isStaff,
+    isProfessional,
+    role,
     login,
     register,
     logout,

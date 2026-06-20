@@ -90,6 +90,49 @@
           </el-table>
         </el-card>
 
+        <el-card class="card-shadow mb-24" v-if="subscaleRecords.length">
+          <div class="section-title">追加子量表结果</div>
+          <el-table :data="subscaleRecords" size="default" stripe>
+            <el-table-column prop="scale_name" label="量表" width="160" />
+            <el-table-column label="得分" width="120" align="center">
+              <template #default="{ row }">
+                <strong>{{ row.total_score }}</strong> / {{ row.max_score }}
+              </template>
+            </el-table-column>
+            <el-table-column label="严重度" width="120" align="center">
+              <template #default="{ row }">
+                <el-tag :type="subscaleTagType(row.severity)" effect="light" size="small">{{ row.severity_label }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="advice" label="解读与建议" min-width="320" />
+          </el-table>
+        </el-card>
+
+        <el-card class="card-shadow mb-24" v-if="comparison">
+          <div class="section-title">趋势对比（与上次测评）</div>
+          <div class="trend-header">
+            <el-tag :type="trendTagType(comparison.overall_tag)" effect="dark" size="large">
+              {{ comparison.overall_label }}
+            </el-tag>
+            <span class="trend-reminder">{{ comparison.reminder }}</span>
+          </div>
+          <el-row :gutter="20" class="mt-16">
+            <el-col :span="8"><div class="trend-stat"><span>GSI 变化</span><strong :class="deltaClass(comparison.delta_gsi)">{{ sign(comparison.delta_gsi) }}{{ Math.abs(comparison.delta_gsi).toFixed(2) }}</strong></div></el-col>
+            <el-col :span="8"><div class="trend-stat"><span>总分变化</span><strong :class="deltaClass(comparison.delta_total)">{{ sign(comparison.delta_total) }}{{ Math.abs(comparison.delta_total) }}</strong></div></el-col>
+            <el-col :span="8"><div class="trend-stat"><span>改善/恶化因子</span><strong>{{ comparison.improved_count }} / {{ comparison.worsened_count }}</strong></div></el-col>
+          </el-row>
+          <el-table :data="comparison.factor_changes" size="small" stripe class="mt-16">
+            <el-table-column prop="name" label="因子" width="140" />
+            <el-table-column label="上次" width="90" align="center"><template #default="{ row }">{{ row.prev.toFixed(2) }}</template></el-table-column>
+            <el-table-column label="本次" width="90" align="center"><template #default="{ row }">{{ row.curr.toFixed(2) }}</template></el-table-column>
+            <el-table-column label="变化" width="100" align="center">
+              <template #default="{ row }">
+                <el-tag :type="trendTagType(row.trend)" size="small" effect="plain">{{ trendLabel(row.trend) }} {{ sign(row.delta) }}{{ Math.abs(row.delta).toFixed(2) }}</el-tag>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-card>
+
         <el-card class="card-shadow mb-24">
           <div class="section-title">答题明细（每题得分）</div>
           <el-row :gutter="12">
@@ -118,6 +161,9 @@
           <el-button size="large" type="primary" @click="$router.push('/questionnaire')">
             <el-icon><Refresh /></el-icon> 重新测评
           </el-button>
+          <el-button size="large" type="warning" :loading="downloading" @click="downloadPdf">
+            <el-icon><Download /></el-icon> 下载PDF报告
+          </el-button>
           <el-button size="large" type="success" @click="window.print()">
             <el-icon><Printer /></el-icon> 打印报告
           </el-button>
@@ -130,15 +176,18 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
 import Layout from '@/components/Layout.vue'
 import { recordsApi } from '@/api'
-import type { AssessmentRecord, FactorDetail } from '@/types'
-import { Sunny, Warning, CircleClose, Clock as HistoryIcon, Refresh, Printer, DocumentChecked } from '@element-plus/icons-vue'
+import type { AssessmentRecord, FactorDetail, Comparison, SubScaleRecord } from '@/types'
+import { Sunny, Warning, CircleClose, Clock as HistoryIcon, Refresh, Printer, DocumentChecked, Download } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const loading = ref(true)
+const downloading = ref(false)
 const record = ref<AssessmentRecord | null>(null)
+const comparison = ref<Comparison | null>(null)
 const factorChartRef = ref<HTMLElement>()
 
 async function loadData() {
@@ -148,8 +197,35 @@ async function loadData() {
     record.value = await recordsApi.getRecordDetail(Number(id))
     await nextTick()
     renderChart()
+    // 趋势对比（失败不阻塞）
+    try {
+      comparison.value = await recordsApi.getComparison(Number(id))
+    } catch {
+      comparison.value = null
+    }
   } finally {
     loading.value = false
+  }
+}
+
+async function downloadPdf() {
+  if (!record.value) return
+  downloading.value = true
+  try {
+    const blob = await recordsApi.downloadPdf(record.value.id) as unknown as Blob
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `SCL90报告_${record.value.id}_${new Date(record.value.created_at).toISOString().slice(0, 10)}.pdf`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+    ElMessage.success('PDF 报告已开始下载')
+  } catch {
+    /* handled by interceptor */
+  } finally {
+    downloading.value = false
   }
 }
 
@@ -221,6 +297,28 @@ function scoreColor(score: number, mean: number, std: number) {
   return '#f56c6c'
 }
 function answerLevel(v: number) { return v }
+
+const subscaleRecords = computed<SubScaleRecord[]>(() => record.value?.subscale_records || [])
+
+function subscaleTagType(sev: string): 'success' | 'warning' | 'danger' | 'info' {
+  if (sev === 'minimal') return 'success'
+  if (sev === 'mild') return 'info'
+  if (sev === 'moderate') return 'warning'
+  return 'danger'
+}
+function trendTagType(t: string): 'success' | 'warning' | 'danger' | 'info' {
+  return t === 'improved' ? 'success' : t === 'worsened' ? 'danger' : 'info'
+}
+function trendLabel(t: string) {
+  return t === 'improved' ? '改善' : t === 'worsened' ? '恶化' : '稳定'
+}
+function sign(v: number) { return v > 0 ? '+' : v < 0 ? '−' : '' }
+function deltaClass(v: number) {
+  // 分数下降=改善(success)，上升=恶化(danger)
+  if (v < 0) return 'delta-good'
+  if (v > 0) return 'delta-bad'
+  return ''
+}
 
 function renderChart() {
   if (!factorChartRef.value) return
@@ -298,6 +396,13 @@ onMounted(loadData)
 .level-4 .pa-val { color: #f06a6a; }
 .level-5 .pa-val { color: #d9001b; }
 .action-bar { display: flex; gap: 12px; justify-content: center; padding: 24px 0; }
+.trend-header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.trend-reminder { color: #606266; font-size: 14px; }
+.trend-stat { background: #fafbfc; border: 1px solid #ebeef5; border-radius: 8px; padding: 16px; text-align: center; }
+.trend-stat span { display: block; color: #909399; font-size: 13px; margin-bottom: 8px; }
+.trend-stat strong { font-size: 22px; }
+.delta-good { color: #67c23a; }
+.delta-bad { color: #f56c6c; }
 
 @media print {
   .action-bar, .layout-header, .layout-footer { display: none !important; }

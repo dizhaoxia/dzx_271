@@ -2,7 +2,7 @@
   <Layout>
     <div class="page-container">
       <el-row :gutter="20">
-        <el-col :span="4">
+        <el-col :xs="24" :sm="6" :md="5" :lg="4">
           <el-card class="card-shadow side-menu">
             <div class="menu-title">
               <el-icon :size="20" color="#409eff"><Setting /></el-icon>
@@ -28,10 +28,22 @@
                 <el-icon><Document /></el-icon>
                 <span>测评数据</span>
               </el-menu-item>
+              <el-menu-item index="/admin/high-risk">
+                <el-icon><WarnTriangleFilled /></el-icon>
+                <span>高危人群</span>
+              </el-menu-item>
+              <el-menu-item index="/admin/professionals">
+                <el-icon><UserFilled /></el-icon>
+                <span>专业人员</span>
+              </el-menu-item>
+              <el-menu-item index="/admin/audit-logs">
+                <el-icon><Lock /></el-icon>
+                <span>操作审计</span>
+              </el-menu-item>
             </el-menu>
           </el-card>
         </el-col>
-        <el-col :span="20">
+        <el-col :xs="24" :sm="18" :md="19" :lg="20">
           <router-view v-slot="{ Component }">
             <transition name="fade" mode="out-in">
               <component :is="Component" />
@@ -47,7 +59,7 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import Layout from '@/components/Layout.vue'
-import { Setting, DataAnalysis, User, Document } from '@element-plus/icons-vue'
+import { Setting, DataAnalysis, User, Document, WarnTriangleFilled, UserFilled, Lock } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const activeMenu = ref(route.path)

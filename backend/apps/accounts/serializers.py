@@ -1,21 +1,29 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
+from django.utils import timezone
 import random
 
 User = get_user_model()
+
+CONSENT_VERSION = '2025.1'
 
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=6, max_length=128)
     confirm_password = serializers.CharField(write_only=True, min_length=6, max_length=128)
+    consent_accepted = serializers.BooleanField(required=True)
 
     class Meta:
         model = User
-        fields = ('phone', 'password', 'confirm_password', 'username', 'email', 'gender', 'age')
+        fields = ('phone', 'password', 'confirm_password', 'username', 'email',
+                 'gender', 'age', 'role', 'title', 'license_no', 'consent_accepted')
         extra_kwargs = {
             'username': {'required': False, 'allow_blank': True},
             'email': {'required': False, 'allow_blank': True},
+            'role': {'required': False},
+            'title': {'required': False, 'allow_blank': True},
+            'license_no': {'required': False, 'allow_blank': True},
         }
 
     def validate(self, attrs):
@@ -23,14 +31,24 @@ class RegisterSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'confirm_password': '两次密码输入不一致'})
         if User.objects.filter(phone=attrs['phone']).exists():
             raise serializers.ValidationError({'phone': '该手机号已注册'})
+        if not attrs.get('consent_accepted'):
+            raise serializers.ValidationError({'consent_accepted': '必须同意隐私协议才能注册'})
+        role = attrs.get('role', User.Role.PATIENT)
+        if role in (User.Role.COUNSELOR, User.Role.DOCTOR) and not attrs.get('license_no'):
+            raise serializers.ValidationError({'license_no': '专业用户须填写执业编号'})
         return attrs
 
     def create(self, validated_data):
         if not validated_data.get('username'):
             validated_data['username'] = f'用户{validated_data["phone"]}'
         password = validated_data.pop('password')
+        consent = validated_data.pop('consent_accepted', False)
         user = User(**validated_data)
         user.set_password(password)
+        if consent:
+            user.consent_accepted = True
+            user.consent_accepted_at = timezone.now()
+            user.consent_version = CONSENT_VERSION
         user.save()
         return user
 
@@ -53,10 +71,32 @@ class LoginSerializer(serializers.Serializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
+    is_professional = serializers.BooleanField(source='is_professional', read_only=True)
+
     class Meta:
         model = User
-        fields = ('id', 'phone', 'username', 'email', 'gender', 'age', 'avatar', 'is_staff', 'is_active', 'created_at')
+        fields = ('id', 'phone', 'username', 'email', 'gender', 'age', 'avatar',
+                 'is_staff', 'is_active', 'role', 'title', 'license_no',
+                 'consent_accepted', 'consent_accepted_at', 'consent_version',
+                 'is_professional', 'created_at')
         read_only_fields = ('id', 'phone', 'is_staff', 'is_active', 'created_at')
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        # 非本人且非专业人员/管理员时，对手机号脱敏
+        request = self.context.get('request')
+        viewer = getattr(request, 'user', None)
+        if viewer and viewer.is_authenticated and viewer.id != instance.id:
+            if not (viewer.is_staff or getattr(viewer, 'is_professional', False)):
+                ret['phone'] = mask_phone(instance.phone)
+        return ret
+
+
+def mask_phone(phone):
+    """对手机号进行 GDPR 级别脱敏：保留前3后2。"""
+    if not phone or len(phone) < 6:
+        return phone
+    return f'{phone[:3]}{"*" * (len(phone) - 5)}{phone[-2:]}'
 
 
 class PasswordResetRequestSerializer(serializers.Serializer):
