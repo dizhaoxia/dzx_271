@@ -256,6 +256,7 @@ const trendTagType = computed(() => {
 })
 
 function startScreening() {
+  store.reset()
   store.gotoStep('screening')
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
