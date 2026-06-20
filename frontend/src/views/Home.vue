@@ -16,7 +16,7 @@
                 <span>立即测评</span>
               </el-button>
               <el-button size="large" @click="$router.push('/history')">
-                <el-icon><History /></el-icon>
+                <el-icon><HistoryIcon /></el-icon>
                 <span>查看历史</span>
               </el-button>
             </div>
@@ -77,7 +77,7 @@
 import { computed } from 'vue'
 import Layout from '@/components/Layout.vue'
 import { useAuthStore } from '@/stores/auth'
-import { Sunny, Warning, CircleClose } from '@element-plus/icons-vue'
+import { Sunny, Warning, CircleClose, EditPen, Clock as HistoryIcon } from '@element-plus/icons-vue'
 
 const authStore = useAuthStore()
 const userInfo = computed(() => authStore.userInfo)

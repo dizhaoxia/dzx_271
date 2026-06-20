@@ -47,6 +47,7 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import Layout from '@/components/Layout.vue'
+import { Setting, DataAnalysis, User, Document } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const activeMenu = ref(route.path)

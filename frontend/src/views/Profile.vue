@@ -86,7 +86,7 @@
                 </el-col>
                 <el-col :span="12">
                   <el-card class="quick-card" shadow="hover" @click="$router.push('/history')">
-                    <el-icon :size="36" color="#67c23a"><History /></el-icon>
+                    <el-icon :size="36" color="#67c23a"><HistoryIcon /></el-icon>
                     <div class="q-title mt-12">历史记录</div>
                     <div class="q-desc mt-8">查看过往测评报告与趋势</div>
                   </el-card>
@@ -121,6 +121,7 @@ import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'elem
 import Layout from '@/components/Layout.vue'
 import { useAuthStore } from '@/stores/auth'
 import { authApi } from '@/api'
+import { EditPen, Clock as HistoryIcon, DataAnalysis, SwitchButton } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const authStore = useAuthStore()

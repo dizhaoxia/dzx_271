@@ -38,11 +38,9 @@
       </div>
     </el-header>
     <el-main class="layout-main">
-      <router-view v-slot="{ Component }">
-        <transition name="fade" mode="out-in">
-          <component :is="Component" />
-        </transition>
-      </router-view>
+      <transition name="fade" mode="out-in">
+        <slot />
+      </transition>
     </el-main>
     <el-footer class="layout-footer">
       <div class="footer-inner">
@@ -58,6 +56,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import type { User } from '@/types'
+import { Notebook, UserFilled, CaretBottom, Setting, DataAnalysis, SwitchButton } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()

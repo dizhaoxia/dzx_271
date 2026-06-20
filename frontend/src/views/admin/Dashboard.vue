@@ -73,6 +73,7 @@ import { ref, onMounted, nextTick } from 'vue'
 import * as echarts from 'echarts'
 import { adminApi } from '@/api'
 import type { DashboardStats } from '@/types'
+import { DataAnalysis, User, Document, Avatar, TrendCharts } from '@element-plus/icons-vue'
 
 const loading = ref(true)
 const stats = ref<DashboardStats | null>(null)

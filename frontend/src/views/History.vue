@@ -88,6 +88,7 @@ import * as echarts from 'echarts'
 import Layout from '@/components/Layout.vue'
 import { recordsApi } from '@/api'
 import type { AssessmentRecord, TrendItem } from '@/types'
+import { TrendCharts, EditPen } from '@element-plus/icons-vue'
 
 const loading = ref(false)
 const records = ref<AssessmentRecord[]>([])

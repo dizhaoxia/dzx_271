@@ -83,7 +83,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Search, Refresh, Download } from '@element-plus/icons-vue'
+import { Search, Refresh, Download, Document } from '@element-plus/icons-vue'
 import { adminApi } from '@/api'
 
 const loading = ref(false)

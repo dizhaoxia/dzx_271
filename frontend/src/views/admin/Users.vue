@@ -57,7 +57,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
-import { Search, Refresh } from '@element-plus/icons-vue'
+import { Search, Refresh, User } from '@element-plus/icons-vue'
 import { adminApi } from '@/api'
 
 const loading = ref(false)

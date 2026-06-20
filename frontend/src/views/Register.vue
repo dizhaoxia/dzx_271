@@ -49,7 +49,7 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
-import { Phone, User, Lock, Message } from '@element-plus/icons-vue'
+import { Phone, User, Lock, Message, Avatar } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()

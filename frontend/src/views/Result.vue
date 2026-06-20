@@ -113,7 +113,7 @@
 
         <div class="action-bar">
           <el-button size="large" @click="$router.push('/history')">
-            <el-icon><History /></el-icon> 查看历史
+            <el-icon><HistoryIcon /></el-icon> 查看历史
           </el-button>
           <el-button size="large" type="primary" @click="$router.push('/questionnaire')">
             <el-icon><Refresh /></el-icon> 重新测评
@@ -134,7 +134,7 @@ import * as echarts from 'echarts'
 import Layout from '@/components/Layout.vue'
 import { recordsApi } from '@/api'
 import type { AssessmentRecord, FactorDetail } from '@/types'
-import { Sunny, Warning, CircleClose } from '@element-plus/icons-vue'
+import { Sunny, Warning, CircleClose, Clock as HistoryIcon, Refresh, Printer, DocumentChecked } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const loading = ref(true)
